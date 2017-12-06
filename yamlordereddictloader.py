@@ -4,6 +4,7 @@
 
 import sys
 import yaml
+
 if float('%d.%d' % sys.version_info[:2]) < 2.7:
     from ordereddict import OrderedDict
 else:
@@ -18,6 +19,7 @@ def construct_yaml_map(self, node):
     yield data
     value = self.construct_mapping(node)
     data.update(value)
+
 
 def construct_mapping(self, node, deep=False):
     if isinstance(node, yaml.MappingNode):
@@ -36,32 +38,30 @@ def construct_mapping(self, node, deep=False):
             hash(key)
         except TypeError as err:
             raise yaml.constructor.ConstructError(
-                'while constructing a mapping', node.start_mark,
-                'found unacceptable key (%s)' % err, key_node.start_mark)
+                    'while constructing a mapping', node.start_mark,
+                    'found unacceptable key (%s)' % err, key_node.start_mark)
         value = self.construct_object(value_node, deep=deep)
         mapping[key] = value
     return mapping
 
-class Loader(yaml.Loader):
-    def __init__(self, *args, **kwargs):
-        yaml.Loader.__init__(self, *args, **kwargs)
 
-        self.add_constructor(
-            'tag:yaml.org,2002:map', type(self).construct_yaml_map)
-        self.add_constructor(
-            'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+class Loader(yaml.CLoader):
+    def __init__(self, *args, **kwargs):
+        yaml.CLoader.__init__(self, *args, **kwargs)
+
+        self.add_constructor('tag:yaml.org,2002:map', type(self).construct_yaml_map)
+        self.add_constructor('tag:yaml.org,2002:omap', type(self).construct_yaml_map)
 
     construct_yaml_map = construct_yaml_map
     construct_mapping = construct_mapping
 
-class SafeLoader(yaml.SafeLoader):
-    def __init__(self, *args, **kwargs):
-        yaml.SafeLoader.__init__(self, *args, **kwargs)
 
-        self.add_constructor(
-            'tag:yaml.org,2002:map', type(self).construct_yaml_map)
-        self.add_constructor(
-            'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+class SafeLoader(yaml.CSafeLoader):
+    def __init__(self, *args, **kwargs):
+        yaml.CSafeLoader.__init__(self, *args, **kwargs)
+
+        self.add_constructor('tag:yaml.org,2002:map', type(self).construct_yaml_map)
+        self.add_constructor('tag:yaml.org,2002:omap', type(self).construct_yaml_map)
 
     construct_yaml_map = construct_yaml_map
     construct_mapping = construct_mapping
@@ -73,16 +73,18 @@ class SafeLoader(yaml.SafeLoader):
 def represent_ordereddict(self, data):
     return self.represent_mapping('tag:yaml.org,2002:map', data.items())
 
-class Dumper(yaml.Dumper):
+
+class Dumper(yaml.CDumper):
     def __init__(self, *args, **kwargs):
-        yaml.Dumper.__init__(self, *args, **kwargs)
+        yaml.CDumper.__init__(self, *args, **kwargs)
         self.add_representer(OrderedDict, type(self).represent_ordereddict)
 
     represent_ordereddict = represent_ordereddict
 
-class SafeDumper(yaml.SafeDumper):
+
+class SafeDumper(yaml.CSafeDumper):
     def __init__(self, *args, **kwargs):
-        yaml.SafeDumper.__init__(self, *args, **kwargs)
+        yaml.CSafeDumper.__init__(self, *args, **kwargs)
         self.add_representer(OrderedDict, type(self).represent_ordereddict)
 
     represent_ordereddict = represent_ordereddict
